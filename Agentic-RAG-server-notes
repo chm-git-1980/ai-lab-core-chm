@@ -1,0 +1,74 @@
+This is a classic "Scrapyard Powerhouse" build. You are taking enterprise-grade surplus hardware and giving it a second life as a dedicated AI worker. While the Quadro M2000 is an older Maxwell-based card, having two of them gives you a combined 8GB of VRAM, which is the "magic number" for running quantized 7B or 8B parameter models (like Llama 3 or Mistral) locally with decent speed.
+
+Here is the blueprint for your "Always On" Agentic RAG lab.
+
+🏗️ Lab Infrastructure Layout
+1. Hardware Configuration
+The Host: Dell OptiPlex 7050 Tower (Intel i5-7500).
+
+The Muscle: 2x Nvidia Quadro M2000 (8GB Total VRAM).
+
+Memory Note: Your current 8GB RAM is a bottleneck for RAG. While the GPUs handle the LLM, the "Agentic" part (searching files, running tools) uses system RAM.
+
+Recommendation: Upgrade to 16GB or 32GB of DDR4 when possible to prevent the system from swapping to the NVMe.
+
+Storage: 256GB NVMe is plenty for the OS and the Vector Database, but LLM weights are large. Expect each model to take 5GB–10GB.
+
+2. Software Stack (The "Agentic" Engine)
+To keep this private and "always on," we will use a Docker-based architecture:
+
+OS: Ubuntu Server 22.04 LTS (Headless is better for performance).
+
+LLM Engine: Ollama (Best for local GPU management).
+
+Vector Database: ChromaDB or Qdrant (To store your documents).
+
+Orchestration: AnythingLLM or Dify. These provide a UI and "Agent" capabilities out of the box.
+
+🛠️ Standard Operating Procedure (SOP): The Build
+
+
+Phase 1: BIOS & OS Prep
+Enable Virtualization: Boot into BIOS (F12) and ensure Intel VT-d is enabled.
+
+Power Settings: Set "Deep Sleep" to Disabled and "AC Recovery" to Power On (this ensures the server restarts itself after a power outage).
+
+Install Ubuntu Server: Use a minimal install to save resources for the AI.
+
+
+
+Phase 2: The CUDA Foundation
+Since you are using older Quadros, you need the correct drivers to ensure the system sees both cards as a single resource pool.
+
+Install Drivers: sudo apt update && sudo apt install nvidia-driver-535 nvidia-utils-535 -y
+
+Install Docker & Nvidia Container Toolkit: This allows your AI software to "talk" to the GPUs inside a sandbox.
+
+Verify: Run nvidia-smi. You should see both M2000s listed.
+
+
+
+Phase 3: Deploying the RAG Pipeline
+We will use AnythingLLM because it handles the embedding engine, the vector database, and the chat interface in one package.
+
+Run Ollama: docker run -d --gpus=all -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+
+Pull a Model: docker exec -it ollama ollama run llama3:8b-instruct-q4_K_M (The "Q4" version ensures it fits comfortably in your 8GB VRAM).
+
+Deploy Frontend: Install AnythingLLM via Docker. Point it to your local Ollama instance.
+
+
+
+Phase 4: Document Ingestion (The "R" in RAG)
+Create a Workspace: Name it "Work Documents" or "Knowledge Base."
+
+Upload: Drop your PDFs/Text files into the interface.
+
+Embed: The system will "chunk" the data and store it in your local vector DB.
+
+⚡ Pro-Tips for the M2000 Setup
+Quantization is Key: Don't try to run "Full Precision" models. Always look for GGUF or EXL2 formats with 4-bit quantization. They provide 95% of the logic for 25% of the VRAM cost.
+
+The "Always On" Heat: Those Quadros are single-slot fans. Ensure the OptiPlex side panel has good airflow, as those cards will sit very close to each other in a standard tower.
+
+Agentic Logic: When setting up your Agent, give it a specific "System Prompt" like: "You are a private document assistant. Use the provided context to answer questions. If the answer isn't in the docs, say so."
